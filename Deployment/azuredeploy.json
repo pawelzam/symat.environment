@@ -1,0 +1,78 @@
+{
+  "$schema": "https://schema.management.azure.com/schemas/2015-01-01/deploymentTemplate.json#",
+  "contentVersion": "1.0.0.0",
+  "parameters": {
+    "_artifactsLocation": {
+      "type": "string"
+    },
+    "_artifactsLocationSasToken": {
+      "type": "securestring"
+    },
+    "prefix": {
+      "type": "string"
+    },
+    "storageName": {
+      "type": "string"
+    },
+    "storageType": {
+      "type": "string"
+    },
+    "adminUserName": {
+      "type": "string"
+    },
+    "adminPassword": {
+      "type": "securestring"
+    }
+  },
+  "variables": {
+    "publicIPName": "[concat(parameters('prefix'), 'ip')]",
+    "publicInterfaceName": "[concat(parameters('prefix'), 'network-interface')]",
+    "storageName": "[concat(parameters('prefix'), 'storage')]"
+  },
+  "resources": [
+    {
+      "name": "common",
+      "type": "Microsoft.Resources/deployments",
+      "apiVersion": "2017-05-10",
+      "properties": {
+        "mode": "Incremental",
+        "templateLink": {
+          "uri": "[concat(parameters('_artifactsLocation'), '/nestedtemplates/common.json', parameters('_artifactsLocationSasToken'))]",
+          "contentVersion": "1.0.0.0"
+        },
+        "parameters": {
+          "storageName": { "value": "[parameters('storageName')]" },
+          "storageType": { "value": "[parameters('storageType')]" },
+          "publicIPName": { "value": "[variables('publicIPName')]" },
+          "publicInterfaceName": { "value": "[variables('publicInterfaceName')]" }
+        }
+      }
+    },
+    {
+      "name": "[concat(parameters('prefix'), 'web')]",
+      "type": "Microsoft.Resources/deployments",
+      "apiVersion": "2017-05-10",
+      "dependsOn": [
+        "[resourceId('Microsoft.Resources/deployments', 'common')]"
+      ],
+      "properties": {
+        "mode": "Incremental",
+        "templateLink": {
+          "uri": "[concat(parameters('_artifactsLocation'), '/nestedtemplates/vm.json', parameters('_artifactsLocationSasToken'))]",
+          "contentVersion": "1.0.0.0"
+        },
+        "parameters": {
+          "name": { "value": "[concat(parameters('prefix'),'web')]" },
+          "computerName": { "value": "web" },
+          "size": { "value": "Standard_B1s" },
+          "windowsOSVersion": { "value": "2012-R2-Datacenter" },
+          "adminUserName": { "value": "[parameters('adminUserName')]" },
+          "adminPassword": { "value": "[parameters('adminPassword')]" },
+          "storageName": { "value": "[parameters('storageName')]" },
+          "publicInterfaceName": { "value": "[variables('publicInterfaceName')]" }
+        }
+      }
+    }
+  ],
+  "outputs": {}
+}

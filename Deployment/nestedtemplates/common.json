@@ -1,0 +1,116 @@
+{
+  "$schema": "https://schema.management.azure.com/schemas/2015-01-01/deploymentTemplate.json#",
+  "contentVersion": "1.0.0.0",
+  "parameters": {
+    "storageName": {
+      "type": "string"
+    },
+    "storageType": {
+      "type": "string"
+    },
+    "publicIPName": {
+      "type": "string"
+    },
+    "publicInterfaceName": {
+      "type": "string"
+    }
+  },
+  "variables": {
+    "networkPrefix": "10.0.0.0/16",
+    "networkSubnet1Name": "Subnet-1",
+    "networkSubnet1Prefix": "10.0.0.0/24",
+    "networkSubnet2Name": "Subnet-2",
+    "networkSubnet2Prefix": "10.0.1.0/24"
+  },
+  "resources": [
+    {
+      "name": "[parameters('storageName')]",
+      "type": "Microsoft.Storage/storageAccounts",
+      "location": "[resourceGroup().location]",
+      "apiVersion": "2016-01-01",
+      "sku": {
+        "name": "[parameters('storageType')]"
+      },
+      "dependsOn": [],
+      "tags": {
+        "displayName": "storage"
+      },
+      "kind": "Storage"
+    },
+    {
+      "name": "network",
+      "type": "Microsoft.Network/virtualNetworks",
+      "location": "[resourceGroup().location]",
+      "apiVersion": "2016-03-30",
+      "dependsOn": [],
+      "tags": {
+        "displayName": "network"
+      },
+      "properties": {
+        "addressSpace": {
+          "addressPrefixes": [
+            "[variables('networkPrefix')]"
+          ]
+        },
+        "subnets": [
+          {
+            "name": "[variables('networkSubnet1Name')]",
+            "properties": {
+              "addressPrefix": "[variables('networkSubnet1Prefix')]"
+            }
+          },
+          {
+            "name": "[variables('networkSubnet2Name')]",
+            "properties": {
+              "addressPrefix": "[variables('networkSubnet2Prefix')]"
+            }
+          }
+        ]
+      }
+    },
+    {
+      "name": "[parameters('publicIPName')]",
+      "type": "Microsoft.Network/publicIPAddresses",
+      "location": "[resourceGroup().location]",
+      "apiVersion": "2016-03-30",
+      "dependsOn": [],
+      "tags": {
+        "displayName": "[parameters('publicIPName')]"
+      },
+      "properties": {
+        "publicIPAllocationMethod": "Dynamic"
+      }
+    },
+    {
+      "name": "[parameters('publicInterfaceName')]",
+      "type": "Microsoft.Network/networkInterfaces",
+      "location": "[resourceGroup().location]",
+      "apiVersion": "2016-03-30",
+      "tags": {
+        "displayName": "vmNic"
+      },
+      "properties": {
+        "ipConfigurations": [
+          {
+            "name": "ipconfig1",
+            "properties": {
+              "privateIPAllocationMethod": "Dynamic",
+              "subnet": {
+                "id": "[Concat(resourceId('Microsoft.Network/virtualNetworks', 'network'),'/subnets/', variables('networkSubnet1Name'))]"
+              },
+              "publicIPAddress": {
+                "id": "[resourceId('Microsoft.Network/publicIPAddresses', parameters('publicIPName'))]"
+              }
+            }
+          }
+        ]
+      }
+    }
+  ],
+  "outputs": {
+    "subnet": {
+      "type": "string",
+      "value": "[Concat(resourceId('Microsoft.Network/virtualNetworks', 'network'),'/subnets/', variables('networkSubnet1Name'))]"
+    }
+  }
+}
